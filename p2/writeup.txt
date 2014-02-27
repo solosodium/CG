@@ -1,0 +1,241 @@
+////////////////////////////////////////////////////////////
+///////////// PROJECT ASSIGNMENT 2 WRITEUP /////////////////
+/////////////////////// Hao Fu /////////////////////////////
+////////////////////////////////////////////////////////////
+
+
+
+/**********************************************************/
+/********************* Introduction ***********************/
+/**********************************************************/
+
+In this assignment, I implemented the material shader with 
+mirror like effect. I also implemented the Loop subdivision 
+algorithm. As the requirement for master level course, I 
+also implemented the adaptive subdivision algorithm and a 
+outline shader with toon shading effect. To see different 
+implementation results, some of the source code need to be 
+changed. Look for comment with "NOTE: ", that's the place 
+to be modified.
+
+
+
+/**********************************************************/
+/*********************** Shaders **************************/
+/**********************************************************/
+
+1. Material shader with mirror effect
+
+a. project.cpp
+	- In this file, I uncommented the line of code to set 
+	the cubemap to the material shader.
+	- I didn't uncomment the assert command as I don't want 
+	the entire program to hang when using a different shader.
+	- Apart from adding the line to load the material shader, 
+	I also added a line to load the outline shader I made. 
+	This line is commented. If using the outline shader, 
+	comment the line for material shader and uncomment this 
+	line. (Look for "NOTE: ")
+
+b. material_vert.glsl
+	- There is almost nothing to change in this script. I 
+	only added "uniform samplerCube cubemap;" to notify the 
+	vertex shader about the cubemap (not necessary).
+
+c. material_frag.glsl
+	- In this script, I have got the normal vector of the 
+	vertex, camera direction and color from varying 
+	parameters. I also added "uniform samplerCube cubemap;".
+	- Computing the fragment color is quite easy. Just 
+	calculate the reflection ray with camera direction and 
+	normal vector. Pass this ray to a mapping function 
+	"textureCube(cubemap, ref_ray);" will return the correct 
+	color on the cubemap.
+	
+RESULTS (Screenshots):
+	- p2/screenshots/material_shader_1.png
+	- p2/screenshots/material_shader_2.png
+
+2. Outline shader with toon shading effect (EXTRA)
+
+a. outline_vert.glsl
+	- The outline shader is basically trace the outline of 
+	the model object with camera direction. I shade the 
+	outline with black shadow casted by the light in the 
+	scene.
+	- In the vertex pass, I got the vertex normal vector, 
+	camera direction and light direction. I then computed 
+	the dot product of normal*camera and normal*light. I 
+	passed these two values to the fragment shader.
+
+b. outline_frag.glsl
+	- In the fragment pass. I used the normal*camera dot 
+	product as a thresholding parameters to cut out the 
+	outline region.
+	- Beyond the outline boundary, I shade the object with 
+	a dark color, whose darkness is affected by the light 
+	direction (represented by normal*light).
+	- Within the outline boundary, I shade the object with 
+	pure color to make cartoonish effect (toon shader).
+
+RESULTS (Screenshots):
+	- p2/screenshots/outline_shader_1.png
+	- p2/screenshots/outline_shader_2.png
+
+
+
+/**********************************************************/
+/********************* Subdivision ************************/
+/**********************************************************/
+
+0. Design spirit (from my code comment)
+	- What I want to do here is do use the original data 
+	structure as much as possible. At the same time, I also 
+	need to build an efficient adjacency data structure for 
+	fast traversal.
+
+1. Data structure design
+
+a. Edge data structure
+	- My design of edge data structure borrowed the spirit 
+	of winged edge data structure but with modifications.
+	- struct MyEdge
+	{
+		// omit constructor here
+		
+		// member data (before creating new vertex)
+		int start;	// start of the edge
+		int end;	// end of the edge
+		int left;	// left point (if there)
+		int right;	// right point (if there)
+		int tri_count;	// number of adjacent triangles
+
+		// member data (after creating new vertex)
+		int create;	// the created vertex index
+
+		// this member data is for adaptive subdivision
+		Vector3 norm_left;	// normal vector of left triangle
+		Vector3 norm_right;	// normal vector of right triangle
+	};
+	- There are three categories of member data in this struct.
+	The first one is about data before creating new vertices.
+	This including: edge (with direction, start->end), the 
+	other vertex on the left triangle and the other vertex on 
+	the right triangle (all vertices are recorded by indices). 
+	The "tri_count" parameter is to record number of triangles 
+	this edge belongs to. If it is 1, it means the edge is on 
+	the boundary.
+	- The second category is about data after creating new 
+	vertices, namely the index of the newly created vertex.
+	- The third category is actually for adaptive subdivision, 
+	which will be explained later.
+
+b. Triangle data structure
+	- Although the starter code provider "triangles" for the 
+	indices of vertices of a triangle. But for the sake of fast 
+	traversal, I also created another triangle data structure.
+	- struct MyTriangle
+	{
+		MyEdge * one;		// first edge
+		MyEdge * two;		// second edge
+		MyEdge * three;		// third edge
+	};
+	- The struct has three pointers to the three edges. As they 
+	are only pointers, it causes little trouble to memory, but 
+	it has significant benefit on traversal.
+	- I used vector for MyEdge, the thing I found out is that 
+	as the vector grows, it constantly changes its memory 
+	location. In order to solve this I have to reserve large 
+	enough memory for the vector before appending it, so that 
+	the memory location will stay the same.
+
+c. Adjacency data structure
+	- The adjacency structure is just a simple 2D bool array. 
+	But I found two things potentially are very interesting.
+	- First, it is possible to just use 2D bit array for this 
+	data structure (although I didn't do), which might be much 
+	more economic.
+	- Second, the dimension I am using is [number of old 
+	vertices] * [number of old vertices + number of new 
+	vertices] (new vertices number = edge number). But in the 
+	context of Loop subdivision, the second dimension can be 
+	[number of new vertices], as after subdivision, all even 
+	vertices have only odd neighbors. I used larger dimension in 
+	my implementation is because of the adaptive subdivision.
+	
+2. Algorithm design
+
+a. First pass - data construction
+	- In this pass, I focused on initializing data structures.
+	- I loop through all the triangles to build up the edge 
+	data structure and triangle data structure.
+	- After I get the number of edges, I also know the number 
+	of new vertices. So I used this information to initialize 
+	the adjacency data structure.
+	
+b. Second pass - compute odd vertices
+	- In this pass, I created new vertices for every edge, and 
+	arrange them into new triangle mesh.
+	- I loop through all the edges to create new vertices, and 
+	append those vertices to the end of existing vertices 
+	vector.
+	- I loop through all the triangles to arrange new smaller 
+	triangles. I reuse the original triangle in the old 
+	"triangles" vector and append other newly created ones at 
+	the end of this vector.
+	- During the above loop, I also set the adjacency data.
+
+c. Third pass - compute even vertices
+	- I loop through all the old vertices, and using the 
+	adjacency data to find the number of their neighbors.
+	- If number of neighbor is 2, it is a boundary vertex.
+	- If number of neighbor is larger than 2, it is an inner 
+	vertex.
+	- Apply the formulas, to get the position if the vertices.
+
+d. Other works
+	- At the very end, I called 
+	has_tcoords = false;
+	has_normals = false;
+	create_gl_data();
+	to tell the program to recompute normals and display.
+
+3. Adaptive subdivision (EXTRA)
+
+a. Usage
+	- Look for "NOTE: " in "subdivison.cpp", you need to set 
+	"ADAPTIVE" to "true" to enable it.
+	- There is also a "THRESHOLD" parameter to set how 
+	"adaptive" the result is going to be. It is a value close 
+	to 1, if it is less than 0.9, it will cause large distortion 
+	to the object.
+
+b. Idea
+	- The idea is to compare the normal vector similarity at the 
+	winged edge, if it is not similar, the edge will create a 
+	new vertex; if it is, edge will stay there.
+
+c. Modification
+	- The modification of the subdivision algorithm is concentrated 
+	in the second pass (compute odd vertices).
+	- Obviously I need to modify the code for creating new vertex 
+	on each edge with the principle described before.
+	- I also have to change the triangle mesh formation process 
+	depending on the number of new vertices in an old triangle.
+	- The cases include: no new vertices, one new vertex, two new 
+	vertices, and three new vertices (same as Loop subdivision).
+
+RESULTs (Screenshots):
+	- adaptive_subdivision_1.png (note the mesh granularity 
+	difference between the bottom and other places on the bunny)
+	- adaptive_subdivision_2.png (note the mesh granularity 
+	difference between the back and tail on the dinosaur)
+	- The effects of adaptive subdivision can also be noted from 
+	the console output with the number of triangles at each 
+	iteration
+
+
+
+
+
+

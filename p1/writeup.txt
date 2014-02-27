@@ -1,0 +1,157 @@
+
+Describe the required features you have implemented, and which you have not.
+if you have missing features, be sure to explain how much you accomplished.
+You should detail anything you think we need to know to understand your code.
+
+/**************************************************************************/
+/************************ Project Description *****************************/
+/**************************************************************************/
+
+/************************/
+/* General Introduction */
+/************************/
+
+The implementation of this project falls into four categories. The first 
+one is preparational setup for the OpenGL environment. As there are two 
+objects in this project, the second and third ones are initialization and 
+update implementation the pool mesh and heightmap mesh. The final one is 
+data cleaning. All the changes happened in "project.hpp" and "project.cpp" 
+files, where both data and function members are declared and implemented. 
+
+/*******************************/
+/* 1. OpenGL Environment Setup */
+/*******************************/
+
+Data members: N/A
+Function menbers: N/A
+Scope: bool OpenglProject::initialize( Camera* camera, Scene* scene );
+
+a. OpenGL state enabling
+ - Enable GL_DEPTH_TEST for rendering 3D mesh
+ - Enable GL_NORMALIZE for normal vector normalization after transformation
+ - Enable GL_LIGHTING and GL_LIGHT0 for lighting
+
+b. Lighting setup
+ - Define three color/intensity for ambient, diffuse and specular light
+ - Define the position of the light
+ - Assign above parameters to light source LIGHT_0
+
+c. Setup buffer clear options
+ - Setup the color used to clear color buffer
+ - Setup the value used to clear depth buffer (GL_DEPTH_TEST enabled)
+
+d. Setup the camera
+ - Use GL_PROJECTION matrix mode to setup a perspective camera with the 
+   parameters provided by the camera pointer
+
+e. Pool and Heightmap mesh initialization (covered later) 
+
+/*******************************/
+/* 2. Pool mesh initialization */
+/*******************************/
+
+Data members: Vector3* mesh_normals;
+Function members: void initializeMesh ();
+    			  void drawMesh (const Camera* camera);
+Scope: bool OpenglProject::initialize( Camera* camera, Scene* scene );
+       void OpenglProject::render( const Camera* camera );
+
+a. Intialize pool mesh normal vectors
+ - Define a Vector3 array in "project.hpp" file to hold the normal vectors
+ - Initialize the size of normal vectors to the size of the vertices
+ - Intialize the normal vectors with the value of 0
+
+b. Compute pool mesh normal vectors
+ - Iterate through all the triangles in the pool mesh
+ - Compute a normal vector for each triangle
+ - Assign the normal vector to the vertices of this triangle $
+ 
+ $ The assignment uses running average (the normal vector of a vertex is 
+   the average of all the normal vectors of the triangles this vertex 
+   belongs to) for a smoother interpolation of the mesh surface
+
+c. Draw pool mesh
+ - Change to GL_MODELVIEW matrix
+ - Set camera position and orientation with the camera pointer
+ - Translate, rotate, scale the object
+ - Enable client states for GL_VERTEX_ARRAY and GL_NORMAL_ARRAY
+ - Set color and material property of the object
+ - Assign vertices and normal vectors array with OpenGL pointers
+ - Draw the mesh using glDrawElements
+ - Disable client states for GL_VERTEX_ARRAY and GL_NORMAL_ARRAY
+
+/***********************************************/
+/* 3. Heightmap mesh initialization and update */
+/***********************************************/
+
+Data members: unsigned int height_size;
+    		  Vector3* height_vertices;
+    		  Triangle* height_triangles; 
+    		  Vector3* height_normals;
+Function members: void initializeHeightmap ();
+    			  void calculateVertices ();
+    			  void calculateNormals ();
+    			  void drawHeightmap (const Camera* camera);
+Scope: bool OpenglProject::initialize( Camera* camera, Scene* scene );
+       void OpenglProject::render( const Camera* camera );
+
+a. Initialize heightmap mesh
+ - An unsigned int value for the number of vertices on one side [x]
+ - A Vector3 array for holding mesh vertices [ x*x ]
+ - A Vector3 array for holding triangles [ (x-1)*(x-1) ]
+ - A Vector3 array for holding normal vectors [ x*x ]
+ - Calculate vertices (covered later)
+ - Iterate through all the squares in the mesh $ to manually initialize 
+   the triangles
+ - Calculate normal vectors (covered later)
+
+ $ The mesh can be divided by (x-1)*(x-1) primitive squares, and each 
+   square contains two triangles
+
+b. Calculate heightmap vertices
+ - Iterate all the possible points (x*x) and decide there poisiton mapped 
+   to a -1 to +1 2D space
+ - Use the function provided by HeightMap class to compute the height of 
+   the vertex at that particular position
+ - Store all the values to the vertices array
+
+c. Calculate heightmap normal vectors
+ - Initialize the normal vectors to 0
+ - Iterate through all the triangles in the heightmap mesh
+ - Compute a normal vector for each triangle
+ - Assign the normal vector to the vertices of this triangle $
+ 
+ $ The assignment uses running average (the normal vector of a vertex is 
+   the average of all the normal vectors of the triangles this vertex 
+   belongs to) for a smoother interpolation of the mesh surface
+
+d. Update heightmap mesh vertices
+ - This is done in the void OpenglProject::update( real_t dt ) as this is 
+   called faster than the render routine
+
+e. Update heightmap normal vectors
+ - This is done the void OpenglProject::render( const Camera* camera ) as 
+   calculating normals is more computational intensive
+
+f. Draw heightmap mesh
+ - Change to GL_MODELVIEW matrix
+ - Set camera position and orientation with the camera pointer
+ - Translate, rotate, scale the object
+ - Enable client states for GL_VERTEX_ARRAY and GL_NORMAL_ARRAY
+ - Set color and material property of the object
+ - Assign vertices and normal vectors array with OpenGL pointers
+ - Draw the mesh using glDrawElements
+ - Disable client states for GL_VERTEX_ARRAY and GL_NORMAL_ARRAY
+
+/********************/
+/* 4. Data Cleaning */
+/********************/
+
+Data members: Vector3* mesh_normals;
+    		  Vector3* height_vertices;
+    		  Triangle* height_triangles; 
+    		  Vector3* height_normals;
+Function members: N/A
+Scope: OpenglProject::~OpenglProject()
+
+a. Delete all the dynamically allocated arrays

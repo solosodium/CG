@@ -1,0 +1,57 @@
+################################################################################
+Documentation and Handin Requirements: 8 / 10
+################################################################################
+
+-2
+Screenshots were not submitted with the handin.
+
+Additional Comments:
+
+Please submit shots from multiple angles.
+
+################################################################################
+Mesh Generation and Rendering: 36 / 40
+################################################################################
+
+-4
+You sampled the heightmap in the render function.  This should have been
+done in the update function and the results saved.
+
+Additional Comments:
+
+Normals should be computed in the update function.
+
+################################################################################
+Transformations and Camera: 11 / 15
+################################################################################
+
+-3
+Rotations are not applied properly -- not converted to angle-axis
+format. Quaternions are not stored a simply and angle and axis,
+and thus require a bit of computation to convert.
+
+-1
+gluPerspective not set up correctly.
+
+Additional Comments:
+
+Unnecessary glPopMatrix() clears changes to projection matrix.
+
+################################################################################
+Normal Computation: 13 / 15
+################################################################################
+
+-2
+Small mistake in normal calculations.
+
+Additional Comments:
+
+Normal averaging is weighted by averaging at each step in summation.
+
+################################################################################
+Shading, Lights, and Materials: 10 / 10
+################################################################################
+
+################################################################################
+Extra Credit: 0 / 0
+################################################################################

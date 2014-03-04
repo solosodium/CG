@@ -78,13 +78,9 @@ bool OpenglProject::initialize( Camera* camera, Scene* scene )
     // Setup OpenGL buffer clear parameters
     glClearColor (0.0, 0.0, 0.0, 0.0);      // when clear color buffer, set to black
     glClearDepth (1.0);                     // when slear depth buffer, set to 1.0 (not sure about this)
-    // Initialize the camera with projection matrix
-    glPushMatrix();
-        glMatrixMode( GL_PROJECTION );      // select the projection matrix
-        glLoadIdentity();                   // set the matrix to identity (identity)
-        // set up the camera using the camera parameters (provided)
-        gluPerspective(camera->get_fov_degrees(), camera->get_aspect_ratio(), camera->get_near_clip(), camera->get_far_clip());
-    glPopMatrix();
+
+
+
     // Initialize Mesh
     this->initializeMesh();
     // Initialize Heightmap
@@ -114,6 +110,9 @@ void OpenglProject::update( real_t dt )
 
     // Update heightmap vertices
     this->calculateVertices();
+
+	// Update Heightmap normals
+	this->calculateNormals();
 }
 
 /**
@@ -127,13 +126,32 @@ void OpenglProject::render( const Camera* camera )
 
     // Clear the buffers
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-    // Mesh is drawn here
+
+	/**
+	 * Fix: projection matrix here?
+	 */
+	
+	// Initialize the camera with projection matrix
+    glMatrixMode( GL_PROJECTION );      // select the projection matrix
+    glLoadIdentity();                   // set the matrix to identity (identity)
+    // set up the camera using the camera parameters (provided)
+    gluPerspective(camera->get_fov_degrees(), camera->get_aspect_ratio(), camera->get_near_clip(), camera->get_far_clip());
+	// change back to modelview
+	glMatrixMode( GL_MODELVIEW );
+	
+
+	// Mesh is drawn here
     this->drawMesh (camera);
-    // Update Heightmap normals
-    this->calculateNormals();
-    // Heightmap is drawn here
+    /**
+	 * This should be in the update scope
+	 */
+	// Update Heightmap normals
+    //this->calculateNormals();
+    
+	// Heightmap is drawn here
     this->drawHeightmap (camera);
-    // Flush everything
+
+	// Flush everything
     glFlush();
 }
 
@@ -161,8 +179,12 @@ void OpenglProject::initializeMesh ()
         Vector3 normal = normalize(cross(scene.mesh.vertices[index[1]] - scene.mesh.vertices[index[0]], scene.mesh.vertices[index[2]] - scene.mesh.vertices[index[0]]));
         // assign the normal vector to appropraite vertices
         for (int n=0; n<3; n++) {
-            mesh_normals[index[n]] = normalize(mesh_normals[index[n]] + normal);
+            mesh_normals[index[n]] += normal;
         }
+    }
+	// normalize all the nomral vectors
+	for (int k=0; k<(int)scene.mesh.num_vertices; k++) {
+        mesh_normals[k] = normalize(mesh_normals[k]);
     }
 }
 
@@ -235,10 +257,14 @@ void OpenglProject::calculateNormals ()
             Vector3 t2_normal = normalize(cross(height_vertices[t2[2]] - height_vertices[t2[0]], height_vertices[t2[1]] - height_vertices[t2[0]]));
             // assign the normal vector to appropraite vertices in t1 and t2
             for (int m=0; m<3; m++) {
-                height_normals[t1[m]] = normalize(height_normals[t1[m]] + t1_normal);
-                height_normals[t2[m]] = normalize(height_normals[t2[m]] + t2_normal);
+                height_normals[t1[m]] += t1_normal;
+                height_normals[t2[m]] += t2_normal;
             }
         }
+    }
+	// normalize all the nomral vectors
+	for (int k=0; k<(int)(height_size*height_size); k++) {
+        height_normals[k] = normalize(height_normals[k]);
     }
 }
 
@@ -248,19 +274,20 @@ void OpenglProject::calculateNormals ()
 void OpenglProject::drawMesh (const Camera* camera)
 {
     // start drawing
-    glPushMatrix();
-        glMatrixMode( GL_MODELVIEW );
-        glLoadIdentity();       // Clears the matrix
-        // change camera position
-        gluLookAt(camera->get_position().x, camera->get_position().y, camera->get_position().z, camera->get_position().x + camera->get_direction().x, camera->get_position().y + camera->get_direction().y, camera->get_position().z + camera->get_direction().z, camera->get_up().x, camera->get_up().y, camera->get_up().z);
-        // transform the object
+		glLoadIdentity();       // Clears the matrix
+		gluLookAt(camera->get_position().x, camera->get_position().y, camera->get_position().z, camera->get_position().x + camera->get_direction().x, camera->get_position().y + camera->get_direction().y, camera->get_position().z + camera->get_direction().z, camera->get_up().x, camera->get_up().y, camera->get_up().z);
+        
+		glPushMatrix();
+		
+		// transform the object
         glTranslatef(scene.mesh_position.position.x, scene.mesh_position.position.y, scene.mesh_position.position.z); 
         glRotatef(scene.mesh_position.orientation.w, scene.mesh_position.orientation.x, scene.mesh_position.orientation.y, scene.mesh_position.orientation.z); 
         glScalef(scene.mesh_position.scale.x, scene.mesh_position.scale.y, scene.mesh_position.scale.z);
         // enable
         glEnableClientState( GL_VERTEX_ARRAY ); // enable using vertex array
         glEnableClientState( GL_NORMAL_ARRAY ); // enable using normal array
-            // draw in between
+			
+			// draw in between
             glColor3f(1.0f, 0.2f, 0.1f);           // set the color of the object
             GLfloat diffuse_intensity[] = {1.0f, 0.2f, 0.0f, 1.0f};     // set the diffuse material
             GLfloat specular_intensity[] = {0.1f, 0.1f, 0.1f, 1.0f};    // set the specular material
@@ -269,10 +296,12 @@ void OpenglProject::drawMesh (const Camera* camera)
             glVertexPointer(3, GL_DOUBLE, 0, scene.mesh.vertices);
             glNormalPointer(GL_DOUBLE, 0, mesh_normals);
             glDrawElements(GL_TRIANGLES, scene.mesh.num_triangles*3, GL_UNSIGNED_INT, scene.mesh.triangles);
-        // disable
+			
+		// disable
         glDisableClientState( GL_VERTEX_ARRAY ); // disable using vertex array
         glDisableClientState( GL_NORMAL_ARRAY ); // disable using normal array
-    glPopMatrix(); 
+		
+		glPopMatrix();
 }
 
 /**
@@ -281,18 +310,20 @@ void OpenglProject::drawMesh (const Camera* camera)
 void OpenglProject::drawHeightmap (const Camera* camera)
 {
     // start drawing
-    glPushMatrix();
-        glMatrixMode( GL_MODELVIEW );
-        glLoadIdentity();       // Clears the matrix
-        // change camera position
-        gluLookAt(camera->get_position().x, camera->get_position().y, camera->get_position().z, camera->get_position().x + camera->get_direction().x, camera->get_position().y + camera->get_direction().y, camera->get_position().z + camera->get_direction().z, camera->get_up().x, camera->get_up().y, camera->get_up().z);
-        // transform the object
+		glLoadIdentity();       // Clears the matrix
+		gluLookAt(camera->get_position().x, camera->get_position().y, camera->get_position().z, camera->get_position().x + camera->get_direction().x, camera->get_position().y + camera->get_direction().y, camera->get_position().z + camera->get_direction().z, camera->get_up().x, camera->get_up().y, camera->get_up().z);
+        
+		// transform the object
+
+		glPushMatrix();
+
         glTranslatef(scene.heightmap_position.position.x, scene.heightmap_position.position.y, scene.heightmap_position.position.z); 
         glRotatef(scene.heightmap_position.orientation.w, scene.heightmap_position.orientation.x, scene.heightmap_position.orientation.y, scene.heightmap_position.orientation.z); 
         glScalef(scene.heightmap_position.scale.x, scene.heightmap_position.scale.y, scene.heightmap_position.scale.z);
         // enable
         glEnableClientState( GL_VERTEX_ARRAY ); // enable using vertex array
         glEnableClientState( GL_NORMAL_ARRAY ); // enable using normal array
+			
             // draw in between
             glColor3f(0.0f, 0.3f, 1.0f);
             GLfloat diffuse_intensity[] = {0.0f, 0.3f, 1.0f, 1.0f};     // set the diffuse material
@@ -302,10 +333,11 @@ void OpenglProject::drawHeightmap (const Camera* camera)
             glVertexPointer(3, GL_DOUBLE, 0, height_vertices);
             glNormalPointer(GL_DOUBLE, 0, height_normals);
             glDrawElements(GL_TRIANGLES, (height_size-1)*(height_size-1)*6, GL_UNSIGNED_INT, height_triangles);
-        // disable
+		// disable
         glDisableClientState( GL_VERTEX_ARRAY ); // disable using vertex array
         glDisableClientState( GL_NORMAL_ARRAY ); // disable using normal array
-    glPopMatrix(); 
+
+		glPopMatrix();
 }
 
 } /* _462 */

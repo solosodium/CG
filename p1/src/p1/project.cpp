@@ -79,7 +79,17 @@ bool OpenglProject::initialize( Camera* camera, Scene* scene )
     glClearColor (0.0, 0.0, 0.0, 0.0);      // when clear color buffer, set to black
     glClearDepth (1.0);                     // when slear depth buffer, set to 1.0 (not sure about this)
 
-
+    /**
+     * Fix: projection matrix here?
+     */
+    
+    // Initialize the camera with projection matrix
+    glMatrixMode( GL_PROJECTION );      // select the projection matrix
+    glLoadIdentity();                   // set the matrix to identity (identity)
+    // set up the camera using the camera parameters (provided)
+    gluPerspective(camera->get_fov_degrees(), camera->get_aspect_ratio(), camera->get_near_clip(), camera->get_far_clip());
+    // change back to modelview
+    glMatrixMode( GL_MODELVIEW );
 
     // Initialize Mesh
     this->initializeMesh();
@@ -126,19 +136,6 @@ void OpenglProject::render( const Camera* camera )
 
     // Clear the buffers
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-
-	/**
-	 * Fix: projection matrix here?
-	 */
-	
-	// Initialize the camera with projection matrix
-    glMatrixMode( GL_PROJECTION );      // select the projection matrix
-    glLoadIdentity();                   // set the matrix to identity (identity)
-    // set up the camera using the camera parameters (provided)
-    gluPerspective(camera->get_fov_degrees(), camera->get_aspect_ratio(), camera->get_near_clip(), camera->get_far_clip());
-	// change back to modelview
-	glMatrixMode( GL_MODELVIEW );
-	
 
 	// Mesh is drawn here
     this->drawMesh (camera);

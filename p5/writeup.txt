@@ -1,0 +1,119 @@
+
+Describe the required features you have implemented, and which you have not.
+if you have missing features, be sure to explain how much you accomplished.
+Describe any major design decisions and descriptions of your algorithms.
+You should detail anything you think we need to know to understand your code.
+
+/***************************************************************************/
+/**********             Project 5 - Physics Engine                **********/
+/**********                      Hao Fu                           **********/
+/***************************************************************************/
+
+
+1. Introduction
+
+In this project, I implemented collision detection functions for different 
+bodies, step function for springs and position and orientation update 
+functions for sphere body using Runge–Kutta method with 4th order. All the 
+above are called in a step function which advances the physics system by a 
+small interval of time.
+
+
+2. Collision Implementation
+
+Modified files: p5/collisions.cpp
+
+I implemented three versions of collides function in the Collisions class.
+
+a) collision between spherebody and shperebody
+To reduce the amount of computation involved in collision detection, my 
+implementation checks some simple criteria such as relative velocity and 
+relative velocity and relative position to early terminate the function. 
+If the two sphere bodies have chance to collide based on these criteria, I 
+compared the distance between two sphere centers with their sum of radius to 
+check if they collide. If they collide, I compute the updated velocities of 
+both spheres and assign them according to the equations described in the 
+project description.
+
+b) collision between spherebody and planebody
+I also used velocity and relative direction of velocity to early terminate 
+the collision detection function. The final step to check is to compute the 
+distance between the center of the sphere and the plane, and compare it with 
+the radius of the sphere. If it still valid, I computed the new velocity of 
+the sphere and assign it.
+
+c) collision between spherebody and trianglebody
+This computation is similar as it is in b), the only difference is that I 
+have to check whether the collision point is within the triangle. I first 
+got the projected point for the sphere center on the plane where the triangle 
+is in, and use barycentric coordinates to determine if the collision point is 
+inside the triangle.
+
+
+3. Step Function for Springs
+
+Modified files: p5/spring.cpp
+
+The step function computes the forces exerted on both attached bodies. The 
+first thing to do is obtained the offsets for both bodies adjusted by their 
+orientations. The second step is to compute the distance between two 
+attachment points. The third step is to compute the relative velocities of 
+both bodies in the direction of the spring. Once I have the distance and 
+velocity, I used the equation in the project description to compute the force 
+and apply it to both bodies.
+
+
+4. Runge–Kutta method
+
+Modified files: body.hpp
+
+I implemented the Runge–Kutta method with 4th order with two versions. The 
+first version "RK4_1" assumes the gradient/derivative of the computed 
+quantity is constant, which applies the computation of velocity and 
+angular_velocity. The second version "RK4_2" assumes the gradient/derivative 
+of the computed quantity is variable, which applies the computation of 
+position and rotation. In this case, "RK4_2" calls "RK4_1" to make a more 
+accurate estimation of velocity and angular_velocity. Both functions return 
+the incremental values of the computed quantity.
+
+
+5. Position and Orientation Update for Sphere Body
+
+Modified files: spherebody.hpp, spherebody.cpp
+
+I started by adding a "clear_force" function to clear the force and torque 
+applied to the sphere body, such that I can update incrementally in 
+"apply_force" function, which is easier for the coordination between gravity 
+and spring force. In the step function updating position, I used the two "RK4" 
+functions to update the position and velocity and apply them to the geometry 
+this sphere body is linked to. In the step function updating orientation, I 
+also used the two "RK4" functions to update rotation and angular_speed. To 
+transfer the incremental orientation from the sphere body model to the actual 
+geometry, I used functions that are the same in the "camera.cpp" file. The 
+"apply_force" function simply takes the force and offset of the exertion point 
+and transform them to force through the center and torque.
+
+
+6. Main Step Function
+
+Modified files: physics.cpp
+
+Within the physics function, I did the following things:
+
+a) create several substeps within the step function to compensate the change 
+in the spring force.
+
+b) call the step function of all the springs in the scene to apply force to 
+all the attached bodies.
+
+c) iterate through all sphere bodies, and do:
+	i. apply gravity to the sphere
+	ii. update position and orientation of all the sphere
+	iii. collision detection between spheres, planes and triangles
+	iv. clear all the forces applied to the sphere
+
+
+7. Screen Captures
+
+Some screen captures are stored in the result_capture folder. They are in .mov 
+format.

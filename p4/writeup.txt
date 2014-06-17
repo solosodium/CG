@@ -1,0 +1,85 @@
+
+Describe the required features you have implemented, and which you have not.
+if you have missing features, be sure to explain how much you accomplished.
+Describe any major design decisions and descriptions of your algorithms.
+You should detail anything you think we need to know to understand your code.
+
+/***************************************************************************/
+/********** Project 4 - Path Tracing and Bounding Volume Hierachy **********/
+/********                   Written by: Hao Fu                     *********/
+/***************************************************************************/
+
+
+1. Introduction
+
+In this project, I implemented two major tasks. The first task is the 
+implemtation of a bounding volume hierachy (BVH) for fast intersection test.
+The second task is the implementation of bidirectional path tracing. All my 
+implemenatation is marked with "TODO" for easy tracking.
+
+
+2. Bounding Volume Hierachy
+
+- scene
+	- scene.hpp & .cpp
+	- sphere.hpp & .cpp
+	- triangle.hpp & .cpp
+	- model.hpp & .cpp
+
+I implemented a box bounding volume hierachy data structure in this project. 
+I did the following tasks to achieve this goal:
+
+a. I defined a data structure (struct) Bounds, to describe a bounding box in 
+world coordinates. The boxes also align with axis in world coordinates.
+
+b. I created a data structure (class) BoundingBox to represents a node in the 
+hierachical tree data structure.
+
+c. I created a function named get_bounds for sphere, triangle and model to 
+get their minimum and maximum values of x, y and z axis in world coordinates.
+
+d. I created a function named build_bounding_boxes to create the tree.
+
+e. I created a function named compute_surface_area to compute the surface 
+area of a bounding box, which allow me to create the tree with maximum 
+approximated efficient.
+
+f. I created a function named intersect_bounding_boxes to test the 
+intersection between a ray and a bounding box.
+
+g. I modified the existing intersection function for scene, so that it now 
+can test for bounding boxes first, then actual geometries.
+
+
+3. Bidirectional path tracing
+
+This task is implemented largely on the existing code of the trace function. 
+I did the following:
+
+a. I created a function named shooting_ray_trace to trace the light from the 
+light source. Only diffuse component is aggragated during the process.
+
+b. I created a function named gathering_ray_trace to trace the ray from the 
+contact point. This function is a slightly altered version of the trace 
+function with its refraction function also rewritten to recursively call the 
+new gathering_ray_trace instead of trace function. This can prevent the trace 
+from going infinite.
+
+c. I added a portion in the main trace function to render light source. 
+It will only render light to be white as in the scene file, light is 
+actually grey (0.7, 0.7, 0.7).
+
+d. I added a code section in main trace function to tracing a certain number 
+of rays from every light source. When those rays terminates, I checked the 
+shadow rays and accumulated/averaged the rays that are not blocked, which 
+are computed as part of the ambient light. (current number of sample is 5)
+
+e. I added a code section in main trace function to tracing a certain number 
+of rays from the contact point. I averaged returning colors as the rest  part 
+of the ambient light. (current number of sample is 5)
+
+
+4. Others
+
+All the screenshots are stored in result_image folder. The samples are 
+generated with 20 sample rays each pixel.

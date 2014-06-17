@@ -1,0 +1,130 @@
+
+Describe the required features you have implemented, and which you have not.
+if you have missing features, be sure to explain how much you accomplished.
+Describe any major design decisions and descriptions of your algorithms.
+You should detail anything you think we need to know to understand your code.
+
+/***************************************************************************/
+/********      Project Assignment 3 - Ray Tracing - Write Up      **********/
+/********                     Name: Hao Fu                        **********/
+/***************************************************************************/
+
+//---------------------------------------------------------------------------
+                        1. General Description
+//---------------------------------------------------------------------------
+
+All the basic requirements have been achieved in this submission. These 
+include intersection test for sphere, triangle and model, implementation of 
+basic ray trace with recursion, direct diffuse illumination with sampled 
+shadows, specular reflection, refraction for non-opaque objects, and compute 
+color and material through interpolation. The modified files are:
+ - p3
+   - raytracer.hpp
+   - raytracer.cpp
+ - scene
+   - scene.hpp
+   - sphere.hpp
+   - shpere.cpp
+   - triangle.hpp
+   - triangle.cpp
+   - model.hpp
+   - model.cpp
+
+//---------------------------------------------------------------------------
+                        2. Intersection Test
+//---------------------------------------------------------------------------
+
+2.1 Intersection data structure
+ - Affected file - scene.hpp
+I created a struct named "Intersect" (changed from the Intersection struct) 
+to hold all the information when an intersection is detected. The data 
+members including a boolean to indicate the validity of the intersection, 
+intersection position and normal vector, material information, refractive 
+index and texture color.
+
+2.2 Virtual intersect member function
+ - Affected file - scene.hpp
+A virtual member function called "intersect" is added to the Geometry class.
+
+2.3 Intersect for sphere
+ - Affected file - sphere.hpp, sphere.cpp
+An intersection test is implemented according to the content described in 
+Shirley's book (pp. 76-77). A few things to notice: t has to be larger than 
+a very small value in order for intersection to be valid; if a sphere has 
+no texture, white color is returned, and if a sphere has texture, standard 
+texture wrapping is implemented according to Shirley's book.
+
+2.4 Intersect for triangle
+ - Affected file - triangle.hpp, triangle.cpp
+An intersection test is implemented according to the content described in 
+Shirley's book. A few things to notice: all the material colors are 
+interpolated using barycentric coordinates; texture color is computed in 
+two stages, the first stage interpolates uv coordinates and the second stage 
+interpolates texture color from each vertex; the intersection detection 
+process will terminate with the order of t, beta and gamma to save computing 
+time; the texture repeat function is achieved using floor function.
+
+2.5 Intersect for mode
+ - Affected file - model.hpp, model.cpp
+The intersection test for model loops through all the triangles in the 
+model. For each triangle, a similar test done in 2.4 is used, except that 
+model only has one uniform material (instead of three). The closest 
+intersected triangle intersection is returned.
+
+//---------------------------------------------------------------------------
+                      3. Basic Ray Casting and Shading
+//---------------------------------------------------------------------------
+
+3.1 Ray casting
+ - Affected file - raytrace.cpp
+ - Function - Color3 Raytracer::trace(Ray ray, size_t depth)
+This function is a recursive function which is terminated by the ending 
+condition of depth exceeds maximum depth (number of consecutive ray cast). 
+It first loops through all the geometries and finds the closest intersection. 
+If the intersection is not found or ending condition reached, return the 
+background color. If intersection detected and the object is opaque, simply 
+return the shaded part of the object and reflection component represented by 
+the recursively called trace with a new reflected ray.
+
+3.2 Shading
+- Affected file - raytrace.cpp
+- Function - Color3 Raytracer::shade (Ray ray, Intersect intersect)
+This function shades the part on the object. Shadow cast functionality is 
+achieved in here by casting multiple shadow rays towards the light source. 
+These shadow rays are evenly distributed on the light sphere to create a soft 
+shadow effect. The ambient and diffuse component of the color is computed in 
+this function according to what has been described in the project material.
+
+//---------------------------------------------------------------------------
+                         4. Reflection and Refraction
+//---------------------------------------------------------------------------
+
+4.1 Reflection
+- Affected file - raytrace.cpp
+- Function - Color3 Raytracer::trace(Ray ray, size_t depth)
+Without refraction, reflection is simply calculated by call the trace 
+function again with the computed reflected ray as a parameter. Reflection 
+with the presence of refraction will be mentioned later.
+
+4.2 Refraction
+- Affected file - raytrace.cpp
+- Function - Color3 Raytracer::trace(Ray ray, size_t depth)
+If an object is dielectric (refractive index != 0), both reflection and 
+refraction must be considered. There could be two cases under this scenario. 
+The first scenario is that the dot product of incoming ray and normal vector 
+is larger than 0. This means the ray is from the outside of the object. I 
+calculated the reflected ray and refracted ray accordingly and select one of 
+the ray with the probability specified by R (reflectance) to avoid ray 
+multiplication. The same parameter is used to decide the color intensity 
+returned from reflection and refraction. The second scenario is that the dot 
+product of incoming ray and normal vector is smaller than 0. This means the 
+ray is from the inside of the object. One special case handled here is total 
+internal reflection with another call of trace with the calculated reflected 
+ray as parameter. Other than the special case, reflectance R and both 
+reflected and refracted ray are calculated and casted again.
+
+//---------------------------------------------------------------------------
+                                 5. Others
+//---------------------------------------------------------------------------
+
+Sample outputs of the program are stored in "screenshots" folder.
